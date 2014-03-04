@@ -1,4 +1,5 @@
 import argparse
+import copy
 import logging
 import json
 import os
@@ -100,17 +101,28 @@ class Report(object):
     def _print(self, str_):
         self._output_stream.write(str_ + '\n')
 
+    def _prep_current_indexes_for_dump(self):
+        indexes = copy.deepcopy(self._current_indexes)
+        for col in indexes:
+            indexes[col].pop('__stats', None)
+            for key in filter(lambda k: any([r.match(k) for r in
+                                             _INDEXES_TO_SKIP]),
+                              indexes.keys()):
+                indexes.pop(key)
+        return indexes
+
     def dump_mark_down(self):
         self._print('# index use by collection')
-        for col in sorted(self._current_indexes.keys()):
+        indexes = self._prep_current_indexes_for_dump()
+        for col in sorted(indexes.keys()):
             self._print('\n## %s' % (col))
             sort_key = \
                 'removal_score' \
                 if any([i.get('removal_score', 0) > 0
-                        for i in self._current_indexes[col].values()]) \
+                        for i in indexes[col].values()]) \
                 else 'used_count'
 
-            for name, index in sorted(self._current_indexes[col].items(),
+            for name, index in sorted(indexes[col].items(),
                                       key=lambda x: x[1].get(sort_key, 0),
                                       reverse=True):
                 if any([r.match(name) for r in _INDEXES_TO_SKIP]) or \
@@ -126,7 +138,7 @@ class Report(object):
                     for q in index['queries']:
                         self._print('    * %s' % (q))
                         for line in index['queries'][q]:
-                            self._print('        * %s hit %d times' % 
+                            self._print('        * %s hit %d times' %
                                         (line, index['queries'][q][line]))
                 self._print('* removal score is %.03f' % (index['removal_score']))
                 try:
@@ -136,7 +148,7 @@ class Report(object):
                 self._print('* index size ratio is %s' % (index_size_ratio))
                 try:
                     collection_size_ratio = \
-                        '%.03f' % (index['collection_size_ratio']) 
+                        '%.03f' % (index['collection_size_ratio'])
                 except TypeError:
                     collection_size_ratio = index['collection_size_ratio']
                 self._print('* collection size ratio is %s' %
@@ -149,6 +161,10 @@ class Report(object):
             self._print('\n---\n')
 
     def dump_json(self):
+        """
+        indexes = copy.deepcopy(self._current_indexes
+        self._print(json.dumps(self.
+        """
         pass
 
 

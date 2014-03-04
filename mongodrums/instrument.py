@@ -46,9 +46,16 @@ class Wrapper(object):
     def __call__(self, *args, **kwargs):
         pass
 
-    def get_source(self):
+    def _get_pkg(globals_):
+        if globals_.get('__package__', None) is not None:
+            return globals_['__package__']
+        return globals_['__name__'].rpartition('.')[0]
+
+    def _get_source(self):
+        # cut the first two frames off the stack since the first is this frame
+        # and the second *should be* the wrapper's frame
         frame = \
-            filter(lambda f: f[0].f_globals['__package__'] \
+            filter(lambda f: self._get_pkg(f[0].f_globals) \
                              not in self._filter_packages,
                    inspect.stack()[2:])[0]
         try:
@@ -84,8 +91,7 @@ class FindWrapper(Wrapper):
                 explain = curs.explain()
             except (TypeError, OperationFailure):
                 explain = {'error': traceback.format_exc()}
-                logging.error('error trying to run explain on curs:\n%s' %
-                              (explain['error']))
+                logging.exception('error trying to run explain on curs')
             push({'type': 'explain',
                   'function': 'find',
                   'database': self_.database.name,
@@ -93,7 +99,7 @@ class FindWrapper(Wrapper):
                   'query': dumps(args[0] if len(args) > 0 else {},
                                  sort_keys=True),
                   'explain': explain,
-                  'source': self.get_source()})
+                  'source': self._get_source()})
         return curs
 
     @classmethod
@@ -123,15 +129,14 @@ class UpdateWrapper(Wrapper):
                 explain = curs.explain()
             except (TypeError, OperationFailure):
                 explain = {'error': traceback.format_exc()}
-                logging.error('error trying to run explain on curs:\n%s' %
-                              (explain['error']))
+                logging.exception('error trying to run explain on curs')
             push({'type': 'explain',
                   'function': 'update',
                   'database': self_.database.name,
                   'collection': self_.name,
                   'query': dumps(args[0], sort_keys=True),
                   'explain': explain,
-                  'source': self.get_source()})
+                  'source': self._get_source()})
         return self._func(self_, *args, **kwargs)
 
     @classmethod
