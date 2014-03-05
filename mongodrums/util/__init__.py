@@ -1,3 +1,4 @@
+import inspect
 import re
 import urlparse
 
@@ -50,14 +51,14 @@ def _p_skeleton(query_part):
     if t == list:
         out = []
         for element in query_part:
-            sub = skeleton(element)
+            sub = _p_skeleton(element)
             if sub is not None:
                 out.append(sub)
         return u'[%s]' % ','.join(out)
     elif t in (dict, SON):
         out = []
         for key in sorted(query_part.keys()):
-            sub = skeleton(query_part[key])
+            sub = _p_skeleton(query_part[key])
             if sub is not None:
                 out.append('%s:%s' % (key, sub))
             else:
@@ -67,11 +68,77 @@ def _p_skeleton(query_part):
         raise InvalidDocument('unknown BSON type %r' % t)
 
 
+# _p_sanitize function courtesy of https://github.com/dcrosta/professor
+def _p_sanitize(value):
+    """"Sanitize" a value (e.g. a document) for safe storage
+in MongoDB. Converts periods (``.``) and dollar signs
+(``$``) in key names to escaped versions. See
+:func:`~professor.skeleton.desanitize` for the inverse.
+"""
+    t = type(value)
+    if t == list:
+        return map(_p_sanitize, value)
+    elif t == dict:
+        return dict((k.replace('$', '_$_').replace('.', '_,_'), _p_sanitize(v))
+                    for k, v in value.iteritems())
+    elif t not in BSON_TYPES:
+        raise InvalidDocument('unknown BSON type %r' % t)
+    else:
+        return value
+
+# _p_desanitize function courtesy of https://github.com/dcrosta/professor
+def _p_desanitize(value):
+    """Does the inverse of :func:`~professor.skeleton.sanitize`.
+"""
+    t = type(value)
+    if t == list:
+        return map(_p_desanitize, value)
+    elif t == dict:
+        return dict((k.replace('_$_', '$').replace('_,_', '.'), _p_desanitize(v))
+                    for k, v in value.iteritems())
+    elif t not in BSON_TYPES:
+        raise InvalidDocument('unknown BSON type %r' % t)
+    else:
+        return value
+
+
 def skeleton(o):
     if isinstance(o, basestring):
         o = loads(o)
     return dumps(_p_skeleton(o))
 
 
+def sanitize(value):
+    return _p_sanitize(value)
+
+
+def desanitize(value):
+    return _p_desanitize(value)
+
+
 def get_default_database(client, mongo_uri):
     return client[urlparse.urlparse(mongo_uri).path.strip('/')]
+
+
+def get_pkg(globals_):
+    if globals_.get('__package__', None) is not None:
+        return globals_['__package__']
+    return globals_['__name__'].rpartition('.')[0]
+
+
+def get_source(filter_packages=None, up=2):
+    # cut the first two frames off the stack since the first is this frame
+    # and the second *should be* the wrapper's frame
+    stack = inspect.stack()
+    frame = stack[up]
+    if filter_packages is not None:
+        frame = \
+            filter(lambda f: get_pkg(f[0].f_globals) \
+                             not in filter_packages,
+                   stack[up:])[0]
+    try:
+        return '%s:%d' % (frame[1], frame[2])
+    finally:
+        del frame
+        del stack
+

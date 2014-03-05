@@ -6,7 +6,8 @@ from mock import patch
 
 from . import BaseTest
 from mongodrums.instrument import (
-    UpdateWrapper, FindWrapper, start, stop, instrument, instrumented
+    _CursorMethodWrapper, _CursorNextWrapper, UpdateWrapper, FindWrapper,
+    start, stop, instrument, instrumented
 )
 
 from mongodrums.config import update
@@ -32,7 +33,7 @@ class InstrumentTest(BaseTest):
         self.assertEqual(pymongo.collection.Collection.update, update)
         self.assertNotIsInstance(pymongo.collection.Collection.update, UpdateWrapper)
 
-    def test_instrument_insert(self):
+    def test_instrument_find(self):
         find = pymongo.collection.Collection.find
         FindWrapper.wrap()
         try:
@@ -43,6 +44,37 @@ class InstrumentTest(BaseTest):
         self.assertEqual(pymongo.collection.Collection.find, find)
         self.assertNotIsInstance(pymongo.collection.Collection.find,
                                  FindWrapper)
+
+    def test_chained_call(self):
+        update({'instrument': {'sample_frequency': 1}})
+        with patch('mongodrums.instrument.push') as push_mock, \
+             FindWrapper.instrument():
+            # chain call
+            curs = self.db.foo.find({'name': 'bob'}).limit(1)
+            self.assertEqual(push_mock.call_count, 0)
+            self.assertTrue(hasattr(curs.next, 'func'))
+            self.assertIsInstance(curs.next.func, _CursorNextWrapper)
+            # use iter instead of direct call to next
+            doc = [d for d in curs][0]
+            self.assertEqual(push_mock.call_count, 1)
+            self.assertEqual(doc, {'_id': 1, 'name': 'bob'})
+            self.assertIn('allPlans', push_mock.call_args[0][0]['explain'])
+        self.assertNotIsInstance(pymongo.collection.Collection.find,
+                                 FindWrapper)
+        self.assertNotIsInstance(self.db.foo.find,
+                                 FindWrapper)
+
+    def test_or_query(self):
+        update({'instrument': {'sample_frequency': 1}})
+        with patch('mongodrums.instrument.push') as push_mock, \
+             FindWrapper.instrument():
+            docs = [d for d in self.db.foo.find({'$or': [{'name': 'bob'},
+                                                         {'name': 'alice'}]},
+                                                {'name': 1})]
+            self.assertEqual(len(docs), 2)
+            self.assertItemsEqual(docs, [{'_id': 1, 'name': 'bob'},
+                                         {'_id': 2, 'name': 'alice'}])
+            self.assertEqual(push_mock.call_count, 1)
 
     def test_find_push(self):
         update({'instrument': {'sample_frequency': 1}})

@@ -88,12 +88,12 @@ class ProfileSinkTest(BaseTest):
                                        '$inc': {'in_stock': -1}},
                                       multi=True)
             self.assertEqual(ret['n'], 100)
-            self.assertEqual(len(self._msgs), 2)
+            self.assertEqual(len(self._msgs), 1)
         for msg in self._msgs:
             self._index_profile_sink.handle(msg, ('127.0.0.1', 65535))
             self._query_profile_sink.handle(msg, ('127.0.0.1', 65535))
         query_profile_col = QueryProfileCollection.get_collection_name()
         index_profile_col = IndexProfileCollection.get_collection_name()
-        self.assertEqual(self.sink_db[query_profile_col].find().count(), 2)
+        self.assertEqual(self.sink_db[query_profile_col].find().count(), 1)
         self.assertEqual(self.sink_db[index_profile_col].find().count(), 1)
 
