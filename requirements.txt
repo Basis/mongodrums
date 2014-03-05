@@ -3,7 +3,7 @@
 bunch
 inflection==0.2.0
 pymongo>=2.5.0
-https://github.com/surfly/gevent/archive/1.0.zip#egg=gevent-1.0
+gevent==1.0
 https://github.com/gregbanks/deltaburke/archive/0.1.2.zip#egg=deltaburke-0.1.2
 https://github.com/gregbanks/maker-py/archive/0.1.4.zip#egg=maker_py-0.1.4
 https://github.com/mongolab/dex/archive/0.6.1.zip#egg=dex-0.6.1
