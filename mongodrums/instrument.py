@@ -15,7 +15,7 @@ import pymongo
 
 from bson.json_util import dumps
 from bunch import Bunch
-from pymongo.cursor import Cursor 
+from pymongo.cursor import Cursor
 from pymongo.errors import OperationFailure
 
 from .config import (
@@ -72,7 +72,7 @@ class _CursorMethodWrapper(Wrapper):
     _ids = WeakSet()
     _ids_lock = threading.RLock()
     _method_name = None
-    
+
     def __new__(cls, *args, **kwargs):
         if cls._method_name is None:
             raise RuntimeError('_method_name must be declared')
@@ -106,7 +106,7 @@ class _CursorMethodWrapper(Wrapper):
                       'source': get_source(self._filter_packages)})
             except Exception:
                 logging.exception('exception pushing explain data for find')
-        return self._func(self_)
+        return self._func(self_, *args, **kwargs)
 
     @classmethod
     def wrap(cls):
@@ -147,7 +147,7 @@ class FindWrapper(Wrapper):
     def __init__(self, func):
         super(FindWrapper, self).__init__(func)
         self._cursor_wrappers = None
-    
+
     def __call__(self, self_, *args, **kwargs):
         curs = self._func(self_, *args, **kwargs)
         if random.random() < self._frequency:

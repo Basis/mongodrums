@@ -76,6 +76,24 @@ class InstrumentTest(BaseTest):
                                          {'_id': 2, 'name': 'alice'}])
             self.assertEqual(push_mock.call_count, 1)
 
+    def test_count(self):
+        update({'instrument': {'sample_frequency': 1}})
+        with patch('mongodrums.instrument.push') as push_mock, \
+             FindWrapper.instrument():
+            num_records = self.db.foo.find().count()
+            self.assertEqual(num_records, 4)
+            # find + $cmd
+            self.assertEqual(push_mock.call_count, 2)
+
+    def test_distinct(self):
+        update({'instrument': {'sample_frequency': 1}})
+        with patch('mongodrums.instrument.push') as push_mock, \
+             FindWrapper.instrument():
+            names = self.db.foo.find().distinct('name')
+            self.assertItemsEqual(names, ['alice', 'bob', 'zed', 'yohan'])
+            # find + $cmd
+            self.assertEqual(push_mock.call_count, 2)
+
     def test_find_push(self):
         update({'instrument': {'sample_frequency': 1}})
         with patch('mongodrums.instrument.push') as push_mock, \
