@@ -44,6 +44,19 @@ class Wrapper(object):
             return self
         return partial(self, owner)
 
+    @staticmethod
+    def _explain(curs):
+        try:
+            explain = curs.explain()
+        except (TypeError, OperationFailure), e:
+            explain = {'error': 'stack:\n\n%s\n\nexception:\n\n%s' %
+                                (traceback.format_stack(),
+                                 traceback.format_exc())}
+            logging.exception('error trying to run explain on curs\n\n'
+                              'stack:\n\n%s\n\nexception:\n' %
+                              (traceback.format_stack()))
+        return explain
+
     @abstractmethod
     def __call__(self, *args, **kwargs):
         pass
@@ -90,11 +103,7 @@ class _CursorMethodWrapper(Wrapper):
             with self.__class__._ids_lock:
                 assert(self_ in self.__class__._ids)
                 self.__class__._ids.discard(self_)
-            try:
-                explain = self_.explain()
-            except (TypeError, OperationFailure):
-                explain = {'error': traceback.format_exc()}
-                logging.exception('error trying to run explain on curs')
+            explain = self.__class__._explain(self_)
             try:
                 push({'type': 'explain',
                       'function': 'find',
@@ -183,11 +192,7 @@ class UpdateWrapper(Wrapper):
     def __call__(self, self_, *args, **kwargs):
         if random.random() < self._frequency:
             curs = self_.find(args[0])
-            try:
-                explain = curs.explain()
-            except (TypeError, OperationFailure):
-                explain = {'error': traceback.format_exc()}
-                logging.exception('error trying to run explain on curs')
+            explain = self.__class__._explain(curs)
             try:
                 push({'type': 'explain',
                       'function': 'update',
