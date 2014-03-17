@@ -121,9 +121,11 @@ def get_default_database(client, mongo_uri):
 
 
 def get_pkg(globals_):
-    if globals_.get('__package__', None) is not None:
+    if '__package__' in globals_:
         return globals_['__package__']
-    return globals_['__name__'].rpartition('.')[0]
+    elif '__name__' in globals_:
+        return globals_['__name__'].rpartition('.')[0]
+    return None
 
 
 def get_source(filter_packages=None, up=2):
