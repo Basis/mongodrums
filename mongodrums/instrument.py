@@ -50,11 +50,11 @@ class Wrapper(object):
             explain = curs.explain()
         except (TypeError, OperationFailure), e:
             explain = {'error': 'stack:\n\n%s\n\nexception:\n\n%s' %
-                                (traceback.format_stack(),
-                                 traceback.format_exc())}
+                                (''.join(traceback.format_stack()),
+                                 ''.join(traceback.format_exc()))}
             logging.exception('error trying to run explain on curs\n\n'
-                              'stack:\n\n%s\n\nexception:\n' %
-                              (traceback.format_stack()))
+                              'stack:\n\n%s\n\nexception:\n\n' %
+                              (''.join(traceback.format_stack())))
         return explain
 
     @abstractmethod
