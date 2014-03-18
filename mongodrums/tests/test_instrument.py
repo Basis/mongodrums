@@ -1,4 +1,5 @@
 import inspect
+import json
 
 import pymongo
 
@@ -64,6 +65,19 @@ class InstrumentTest(BaseTest):
         self.assertNotIsInstance(self.db.foo.find,
                                  FindWrapper)
 
+    def test_cursor_terminator_query(self):
+        update({'instrument': {'sample_frequency': 1}})
+        with patch('mongodrums.instrument.push') as push_mock, \
+             FindWrapper.instrument():
+            q = {'name': 'bob'}
+            curs = self.db.foo.find(q)
+            self.assertIn('_mongodrums', curs.__dict__)
+            curs.next()
+            self.assertNotIn('_mongodrums', curs.__dict__)
+            self.assertDictEqual(
+                json.loads(push_mock.call_args[0][0]['query']),
+                q)
+
     def test_or_query(self):
         update({'instrument': {'sample_frequency': 1}})
         with patch('mongodrums.instrument.push') as push_mock, \
@@ -91,7 +105,6 @@ class InstrumentTest(BaseTest):
              FindWrapper.instrument():
             names = self.db.foo.find().distinct('name')
             self.assertItemsEqual(names, ['alice', 'bob', 'zed', 'yohan'])
-            # find + $cmd
             self.assertEqual(push_mock.call_count, 2)
 
     def test_find_push(self):

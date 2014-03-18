@@ -109,12 +109,14 @@ class _CursorMethodWrapper(Wrapper):
                       'function': 'find',
                       'database': self_.collection.database.name,
                       'collection': self_.collection.name,
-                      'query': dumps(args[0] if len(args) > 0 else {},
+                      'query': dumps(self_._mongodrums['spec'],
                                      sort_keys=True),
                       'explain': explain,
                       'source': get_source(self._filter_packages)})
             except Exception:
                 logging.exception('exception pushing explain data for find')
+            finally:
+                del self_.__dict__['_mongodrums']
         return self._func(self_, *args, **kwargs)
 
     @classmethod
@@ -161,6 +163,7 @@ class FindWrapper(Wrapper):
         curs = self._func(self_, *args, **kwargs)
         if random.random() < self._frequency:
             assert(self._cursor_wrappers is not None)
+            curs._mongodrums = {'spec': args[0] if len(args) > 0 else {}}
             _CursorMethodWrapper.track_cursor(curs)
         return curs
 
