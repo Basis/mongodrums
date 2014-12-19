@@ -38,7 +38,9 @@ nosetests.xml
 *.swp
 
 # virtualenv
-env/
+/env
 
 # autoenv
 .env
+
+/.idea
