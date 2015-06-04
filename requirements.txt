@@ -4,8 +4,8 @@ bunch
 inflection==0.2.0
 pymongo>=2.5.0
 gevent==1.0
--e git+ssh://git@github.com/Basis/deltaburke@release-2.3#egg=deltaburke-0.1.3
--e git+ssh://git@github.com/Basis/makerpy.git@release-2.3#egg=makerpy-0.1.4
+-e git+ssh://git@github.com/Basis/deltaburke@2.3.2#egg=deltaburke-0.1.3
+-e git+ssh://git@github.com/Basis/makerpy.git@2.3.2#egg=makerpy-0.1.4
 https://github.com/mongolab/dex/archive/0.6.1.zip#egg=dex-0.6.1
 
 ### test ###
